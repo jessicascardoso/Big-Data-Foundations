@@ -1,0 +1,152 @@
+# 1. Iniciar o cluster de Big Data
+cd docker-bigdata
+docker-compose up -d
+
+# 2. Baixar os dados dos exercícios do treinamento
+cd input
+sudo git clone https://github.com/rodrigo-reboucas/exercises-data.git
+
+docker ps 
+ls 
+ls exercises-data/
+
+# 3. Acessar o container do namenode
+docker exec -it namenode bash
+
+# Todas as pastas do hdfs
+hdfs dfs -ls -R /
+
+# Pasta user
+hdfs dfs -ls -R /user
+
+# 4. Criar a estrutura de pastas apresentada abaixo pelo comando: $ hdfs dfs -ls -R /
+
+user/aluno/
+user/aluno/<nome>
+user/aluno/<nome>/data
+user/aluno/<nome>/recover
+user/aluno/<nome>/delete
+
+
+# -p para criar a estrutura
+hdfs dfs -mkdir -p /user/aluno/jessica/data
+
+# Para verificar se a pasta foi criada
+hdfs dfs -ls -R /user/aluno
+
+# Não precisa -p pois já tem a estrutura
+hdfs dfs -mkdir /user/aluno/jessica/recover
+hdfs dfs -mkdir /user/aluno/jessica/delete
+
+
+hdfs dfs -ls -R /user/aluno
+
+# 5. Enviar a pasta "/input/exercises-data/escola" e o arquivo "/input/exercises-data/entrada1.txt" para data
+hdfs dfs -put /input/exercises-data/escola/   /user/aluno/jessica/data
+
+# Verificar
+hdfs dfs -ls -R /user/aluno/jessica/data
+
+hdfs dfs -put /input/exercises-data/entrada1.txt   /user/aluno/jessica/data
+hdfs dfs -ls -R /user/aluno/jessica/data
+
+# Sem o -R para ver só a pasta e o arquivo
+hdfs dfs -ls  /user/aluno/jessica/data
+
+# 6. Mover o arquivo "entrada1.txt" para recover
+hdfs dfs -mv /user/aluno/jessica/data/entrada1.txt  /user/aluno/jessica/recover
+
+#Verificar a pasta recover (Contém o arquivo "entrada1.txt")
+hdfs dfs -ls /user/aluno/jessica/recover
+
+
+#Verificar a pasta data (Não tem mais o arquivo movido)
+hdfs dfs -ls /user/aluno/jessica/data
+
+
+# 7. Baixar o arquivo do hdfs “escola/alunos.json” para o sistema local /
+hdfs dfs -get /user/aluno/jessica/escola/alunos.json /
+
+# No namenode temos 2 sistemas de arquivos para listar:
+# Local
+ls /
+# HDFS
+hdfs dfs -ls /
+
+# 8) Deletar a pasta recover
+# Se for pasta, usar -R (sem o -R, vai dar erro "Is a directory")
+hdfs dfs -rm -R /user/aluno/jessica/recover
+
+# 9. Deletar permanentemente o delete
+hdfs dfs -rm  -skipTrash -R /user/aluno/jessica/delete
+
+# 10. Procurar o arquivo "alunos.csv" dentro do /user
+# Cluster em produção é lento
+hdfs dfs -find /user -name alunos.csv
+
+#  OU -iname (para não considerar sensitive o nome do arquivo: alunos.csv ou Alunos.csv)
+hdfs dfs -find /user -iname Alunos.csv
+
+# 11. Mostrar o último 1KB do arquivo "alunos.csv"
+# O tail é usado para ver a calda do arquivo por ser grande demais.
+hdfs dfs -tail /user/aluno/jessica/data/escola/alunos.csv
+
+# Usaria o cat se quisesse ver o arquivo inteiro.
+
+# 12. Mostrar as 2 primeiras linhas do arquivo "alunos.csv"
+hdfs dfs -cat /user/aluno/jessica/data/escola/alunos.csv | head -n 2
+
+# 13. Verificação de soma das informações do arquivo "alunos.csv"
+hdfs dfs -checksum /user/aluno/jessica/data/escola/alunos.csv
+
+# 14. Criar um arquivo em branco com o nome de "test" no data
+# Geralmente se cria esse arquivo para ter a data e a hora de um determinado job.
+hdfs dfs -touchz /user/aluno/jessica/data/test
+# Verificar
+hdfs dfs -ls  /user/aluno/jessica/data
+
+# 15. Alterar o fator de replicação do arquivo “test” para 2
+hdfs dfs -setrep 2 /user/aluno/jessica/data/test 
+
+# Agora o "test" tem 2 réplicas
+hdfs dfs -ls /user/aluno/jessica/data
+
+# 16. Ver as informações do arquivo “alunos.csv”
+hdfs dfs -stat %r /user/aluno/jessica/data/escola/alunos.csv
+# 3
+
+# Tamanho do bloco
+hdfs dfs -stat %o /user/aluno/jessica/data/escola/alunos.csv
+
+# 134217728 (divide por 1024 para saber o tamanho do bloco)
+# padrao é sempre 128 megas
+
+# 17. Exibir o espaço livre do data e o uso do disco
+
+# Espaço livre
+hdfs dfs -df /user/aluno/jessica/data/
+
+Filesystem                    Size      Used     Available  Use%
+hdfs://namenode:8020  269490393088  31207424  249279459494    0%
+
+# Vai dar um valor difícil de falar, então coloca o -h para os humanos enxergarem
+hdfs dfs -df -h  /user/aluno/jessica/data/
+
+Filesystem               Size    Used  Available  Use%
+hdfs://namenode:8020  251.0 G  29.8 M     232.2 G    0%
+
+# Uso do disco
+hdfs dfs -du -h  /user/aluno/jessica/data/
+
+29.2 M  /user/aluno/jessica/data/escola
+0       /user/aluno/jessica/data/test
+
+# Uso do disco de todo cluster 
+hdfs dfs -du -h  /
+17.6 K  /hbase
+0       /tmp
+29.2 M  /user
+
+exit
+
+docker-compose stop
